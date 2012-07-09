@@ -2,7 +2,7 @@
   "author": "Bjørge Næss <bjoerge@gmail.com>",
   "name": "sprig",
   "description": "Tiny, efficient DOM components",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "repository": {
     "type": "git",
     "url": "github.com/bjoerge/sprig.git"
@@ -21,9 +21,9 @@
     "ws": "latest",
     "browserify": "git://github.com/bjoerge/node-browserify#fix-broken-watch"
   },
-  "scripts":{
-    "test":"make test",
-    "test-browser":"make test-browser"
+  "scripts": {
+    "test": "make test",
+    "test-browser": "make test-browser"
   },
   "optionalDependencies": {},
   "engines": {
