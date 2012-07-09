@@ -7,7 +7,7 @@
     "type": "git",
     "url": "github.com/bjoerge/sprig.git"
   },
-  "main": "sprig.js",
+  "main": "lib/sprig.js",
   "dependencies": {},
   "devDependencies": {
     "jquery": "git://github.com/bjoerge/jquery-node#master",
