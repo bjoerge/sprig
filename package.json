@@ -1,0 +1,32 @@
+{
+  "author": "Bjørge Næss <bjoerge@gmail.com>",
+  "name": "sprig",
+  "description": "Tiny, efficient DOM components",
+  "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "github.com/bjoerge/sprig.git"
+  },
+  "main": "sprig.js",
+  "dependencies": {},
+  "devDependencies": {
+    "jquery": "git://github.com/bjoerge/jquery-node#master",
+    "coffee-script": "latest",
+    "location": "latest",
+    "navigator": "latest",
+    "mocha": "latest",
+    "expect.js": "latest",
+    "sinon": "latest",
+    "express": "latest",
+    "ws": "latest",
+    "browserify": "git://github.com/bjoerge/node-browserify#fix-broken-watch"
+  },
+  "scripts":{
+    "test":"make test",
+    "test-browser":"make test-browser"
+  },
+  "optionalDependencies": {},
+  "engines": {
+    "node": "*"
+  }
+}
