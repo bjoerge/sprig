@@ -5,7 +5,7 @@
 # Getting started
 
 Download [uncompressed](http://raw.github.com/bjoerge/sprig/master/sprig.js) (~ 6,5KB) 
-or [minified](raw.github.com/bjoerge/sprig/master/sprig.min.js) (~ 4KB)
+or [minified](http://raw.github.com/bjoerge/sprig/master/sprig.min.js) (~ 4KB)
 
 Currently Sprig depends on [jQuery](http://jquery.com).
 
