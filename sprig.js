@@ -6,7 +6,7 @@
   var
       debug = false,
       Sprig,
-      $ = global.jQuery
+      $ = window.jQuery
           || (typeof require == 'function' && (require("jquery") || require("jQuery")))
           || (function () {
         throw "Sprig requires jQuery";
@@ -216,6 +216,6 @@
   }
   else {
     // ... or add to to the global object as Sprig
-    global.Sprig = Sprig;
+    window.Sprig = Sprig;
   }
-}(window));
+}(typeof window != 'undefined' ? window : this));
