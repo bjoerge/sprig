@@ -1,7 +1,5 @@
 ![Sprig](http://bjoergenaess.no/sprig.jpg?new-cache-key-pls)
 
-# DISCLAIMER: Work in progress
-
 # Getting started
 
 Download [uncompressed](http://raw.github.com/bjoerge/sprig/master/sprig.js) (~ 6,5KB) 
@@ -115,7 +113,7 @@ Sprig.add('async-component', function(el, opts, done) {
 
 # How does it work?
 
-In bleeding edge browsers supporting [Mutation Observers](http://dvcs.w3.org/hg/domcore/raw-file/tip/Overview.html#mutation-observers)
+In bleeding edge browsers supporting [Mutation Observers](http://dom.spec.whatwg.org/#mutation-observers)
 (currently only Chrome and Firefox), Sprig works by observing changes to the DOM tree. This, however, only works
 for nodes inserted dynamically from JavaScript. If you serve a HTML file already layed out with components, then you will 
 have to set them up initially, e.g. on domReady, like this:
