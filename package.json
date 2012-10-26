@@ -2,7 +2,7 @@
   "author": "Bjoerge Naess <bjoerge@gmail.com>",
   "name": "sprig",
   "description": "Tiny, efficient DOM components",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "repository": {
     "type": "git",
     "url": "github.com/bjoerge/sprig.git"
