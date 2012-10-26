@@ -13,6 +13,7 @@
     "jquery": "git://github.com/bjoerge/jquery-node#master",
     "coffee-script": "latest",
     "location": "latest",
+    "jsdom": "latest",
     "navigator": "latest",
     "mocha": "latest",
     "expect.js": "latest",
