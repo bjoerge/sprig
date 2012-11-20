@@ -89,10 +89,8 @@
           for (var i = 0, i_len = mutations.length; i < i_len; i++) {
             (function (addedNodes) {
               for (var j = 0; j < addedNodes.length; j++) {
-                var $el = $(addedNodes[j]);
-                if (!hasComponent($el) || isInitialized($el) || !isDeferred($el)) return;
                 log("DOM mutated, now setup: ", addedNodes[j]);
-                self.setup(addedNodes[j])
+                self.load(addedNodes[j])
               }
             }(mutations[i].addedNodes));
           }
@@ -174,19 +172,21 @@
       var data = $D(el).get();
 
       var self = this;
+      var elementArg = Sprig.unwrapElement ? el : $(el);
       if (async) {
-        setupFunc(el, data, function () {
+        setupFunc(elementArg, data, function () {
           self.finalize(el);
         });
       }
       else {
-        setupFunc(el, data);
+        setupFunc(elementArg, data);
         self.finalize(el);
       }
     };
 
     // Look for elements that is not already loaded, or currently loading
     Sprig.prototype.load = function (root) {
+      root || (root = $('body'));
       if (hasComponent(root) && !isInitialized(root)) {
         this.setup($(root)[0]);
       }
@@ -214,6 +214,8 @@
 
     var global = new Sprig();
     $.extend(Sprig, global);
+
+    Sprig.unwrapElement = false;
 
     return Sprig;
 
