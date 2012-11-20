@@ -16,6 +16,7 @@
     "jsdom": "latest",
     "navigator": "latest",
     "mocha": "latest",
+    "uglify-js": "latest",
     "expect.js": "latest",
     "sinon": "latest",
     "express": "latest",

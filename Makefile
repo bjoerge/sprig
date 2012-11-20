@@ -26,7 +26,7 @@ sprig.js: $(SRC)
 	@node -e "console.log('%sKB %s', (Math.round(require('fs').statSync('$(DST)/$@').size/1024)), '$(DST)/$@')"
 
 sprig.min.js: sprig.js
-	@uglifyjs --no-mangle $(DST)/$< > $(DST)/$@
+	@node_modules/.bin/uglifyjs --no-mangle $(DST)/$< > $(DST)/$@
 	@node -e "console.log('%sKB %s', (Math.round(require('fs').statSync('$(DST)/$@').size/1024)), '$(DST)/$@')"
 
 docs: test-docs
