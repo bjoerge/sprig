@@ -24,7 +24,7 @@
     "browserify": "git://github.com/bjoerge/node-browserify#fix-broken-watch"
   },
   "scripts": {
-    "test": "make test",
+    "test": "node_modules/.bin/mocha -r expect.js",
     "test-browser": "make test-browser"
   },
   "optionalDependencies": {},
