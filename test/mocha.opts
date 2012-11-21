@@ -1,4 +1,3 @@
 --compilers coffee:coffee-script
---reporter nyan
 --recursive
 --ui bdd
