@@ -1,5 +1,7 @@
 ![Sprig](http://bjoergenaess.no/sprig.jpg?new-cache-key-pls)
 
+[![Build Status](https://secure.travis-ci.org/bjoerge/sprig.png?branch=master)](https://travis-ci.org/bjoerge/sprig)
+
 # Getting started
 
 Download [uncompressed](http://raw.github.com/bjoerge/sprig/master/sprig.js) (~ 6,5KB) 
