@@ -15,6 +15,7 @@
     "location": "latest",
     "jsdom": "latest",
     "navigator": "latest",
+    "es5-shim": "latest",
     "mocha": "latest",
     "uglify-js": "latest",
     "expect.js": "latest",

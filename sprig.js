@@ -1,243 +1,179 @@
 (function (window, undefined) {
 
   // DOM4 MutationObserver http://dom.spec.whatwg.org/#mutation-observers
-  var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
+  // todo: var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
 
-  var
-      debug = false,
-      Sprig,
-      $ = window.jQuery
-          || (typeof require == 'function' && require("jquery"))
-          || (function () {
-        throw "Sprig requires jQuery";
-      })(),
-      log = function () {
-        if (!debug) {
-          return log = function () { }; // Silence the log
-        }
-        console.log.apply(console, arguments);
-      },
-      camel2data = function (camelStr) {
-        return camelStr.replace(/([A-Z]){1}/g, function (s) {
-          return "-" + s.toLowerCase()
-        })
-      },
-      // Use a wrapper around the dataset instead of jquery because we need the dataset to be in sync with data-* attributes
-      // Only for compatibility reasons
-      $D = function (el) {
-        if (!el.__sprigDataAccessor__) {
-
-          if (el.dataset) {
-            el.__sprigDataAccessor__ = {
-              "set": function (key, val) {
-                el.dataset[key] = val;
-              },
-              "get": function (key) {
-                return key ? el.dataset[key] : el.dataset;
-              }
-            }
-          }
-          else {
-            el.__sprigDataAccessor__ = (function () {
-              var dataset = $.extend({}, $(el).data());
-              return {
-                "set": function (key, val) {
-                  dataset[key] = val;
-                  el.setAttribute("data-"+camel2data(key), val);
-                },
-                "get": function (key) {
-                  return key ? dataset[key] : dataset;
-                }
-              }
-            }());
-          }
-        }
-        return el.__sprigDataAccessor__;
-      };
-
-  // --- UTILS
-  function hasComponent(el) {
-    return $D(el).get().sprigComponent
-  }
-
-  function isLoading(el) {
-    return $D(el).get().sprigReadyState == 'loading'
-  }
-
-  function isLoaded(el) {
-    return $D(el).get().sprigReadyState == 'loaded'
-  }
-
-  function isScheduled(el) {
-    return $D(el).get().sprigReadyState == 'scheduled'
-  }
-
-  // Either loaded or in the process of loading
-  function isInitialized(el) {
-    return isLoaded(el) || isLoading(el);
-  }
-
-  // Either loaded or in the process of loading
-  function inProgress(el) {
-    return isScheduled(el) || isLoading(el) || isLoaded(el);
-  }
-
-  function isDeferred(el) {
-    return $D(el).get().sprigDefer
-  }
-
-  Sprig = (function () {
-
-    function Sprig() {
-      this.components = {};
-      this.pending = {};
-
-      if (MutationObserver) {
-        var self = this;
-        var observer = new MutationObserver(function (mutations) {
-          for (var i = 0, i_len = mutations.length; i < i_len; i++) {
-            (function (addedNodes) {
-              for (var j = 0; j < addedNodes.length; j++) {
-                log("DOM mutated, now setup: ", addedNodes[j]);
-                self.load(addedNodes[j])
-              }
-            }(mutations[i].addedNodes));
-          }
-        });
-        observer.observe(document, { childList: true, subtree: true });
-      }
-    }
-
-    Sprig.prototype.finalize = function (el) {
-      $D(el).set("sprigReadyState", "loaded");
-      this.load(el);
-    };
-
-    Sprig.prototype.add = function (componentId, setupFunc) {
-      if (this.components[componentId]) {
-        return console.warn('Component "' + componentId + '" already registered. Skipping.');
-      }
-
-      this.components[componentId] = {
-        instances: [],
-        setupFunc: setupFunc
-      };
-
-      if (this.pending[componentId]) {
-        var todo = this.pending[componentId].slice();
-        delete this.pending[componentId];
-        var el;
-        while (el = todo.shift()) {
-          log("Now ready to setup " + componentId + " for ", el);
-          this.setup(el);
-        }
-      }
-    };
-
-    // Setup a component for a single element
-    Sprig.prototype.setup = function (el) {
-
-      var componentId = $D(el).get().sprigComponent;
-
-      var component = this.components[componentId];
-      if (!component) {
-        // defer initialization until component is added
-        log('Component "' + componentId + '" not registered yet, so defer setup for', el);
-        this.pending[componentId] || (this.pending[componentId] = []);
-        this.pending[componentId].push(el);
-        return
-      }
-
-      log("Setup component for", el);
-      $D(el).set("sprigReadyState", "loading");
-
-      var instance = null;
-
-      for (var i = 0, len = component.instances.length; i < len; i++) {
-        if (component.instances[i].el == el) {
-          instance = component.instances[i];
-          break;
-        }
-      }
-
-      if (instance) {
-        // We are reloading, reset attributes
-        log("reloading, original attrs:", JSON.stringify(instance.originalAttrs))
-        $.extend($D(el).get(), instance.originalAttrs);
-        log($D(el).get())
-      }
-      else {
-        instance = {
-          el:el,
-          originalAttrs:$.extend({}, $(el).data())
-        };
-        component.instances.push(instance);
-      }
-
-      var setupFunc = component.setupFunc;
-
-      var async = setupFunc.length == 3;
-
-      var data = $D(el).get();
-
-      var self = this;
-      var elementArg = Sprig.unwrapElement ? el : $(el);
-      if (async) {
-        setupFunc(elementArg, data, function () {
-          self.finalize(el);
-        });
-      }
-      else {
-        setupFunc(elementArg, data);
-        self.finalize(el);
-      }
-    };
-
-    // Look for elements that is not already loaded, or currently loading
-    Sprig.prototype.load = function ($el) {
-      $el = $el ? $($el) : $('body');
-      var el = $el[0];
-      if (hasComponent(el) && !inProgress(el)) {
-        this.setup(el);
-      }
-      var $pending = $('[data-sprig-component]:not([data-sprig-ready-state=loaded]):not([data-sprig-ready-state=loading]):not([data-sprig-ready-state=scheduled])', el);
-      log("Load " + $pending.length + " components in", el);
-      var self = this;
-      $pending.each(function (i, el) {
-        $D(el).set("sprigReadyState", "scheduled");
-      });
-      $pending.each(function (i, el) {
-        self.setup(el);
-      });
-    };
-
-    // Look for elements that is already loaded, and force-reload them
-    Sprig.prototype.reload = function (root) {
-      if (hasComponent(root) && isInitialized(root)) {
-        this.setup($(root)[0]);
-      }
-      log("Load component inside", root);
-      var $loaded = $("[data-sprig-ready-state=loaded]", root);
-      log("Reload " + $loaded.length + " components in", root || 'body');
-      var self = this;
-      $loaded.each(function (i, el) {
-        self.setup(el);
-      });
-    };
-
-    var global = new Sprig();
-    $.extend(Sprig, global);
-
-    Sprig.unwrapElement = false;
-
-    return Sprig;
-
+  var $ = window.jQuery
+      || (typeof require == 'function' && require("jquery"))
+      || (function () {
+    throw "Sprig requires jQuery";
   })();
 
-  // Setup mutation observers
+  var prefix = "sprig";
+
+  var componentAttr = 'data-' + prefix + '-component';
+  var readyStateAttr = 'data-' + prefix + '-ready-state';
+
+  //--- Selectors used frequently (todo wrap in a nice chainable api)
+  var selectors = {
+    component: "[" + componentAttr + "]",
+    unprocessed: "[" + componentAttr + "]:not([" + readyStateAttr + "])",
+    scheduled: "[" + componentAttr + "][" + readyStateAttr + "=scheduled]",
+    deferred: "[" + componentAttr + "][" + readyStateAttr + "=deferred]",
+    loading: "[" + componentAttr + "][" + readyStateAttr + "=loading]",
+    loaded: "[" + componentAttr + "][" + readyStateAttr + "=loaded]"
+  };
+
+  selectors.forComponentDef = function (name) {
+    return "[" + componentAttr + "=" + name + "]";
+  };
+
+  /**
+   * Represents a single component instance
+   * @param el element it is attached to
+   * @constructor
+   * @param registry
+   */
+  function Component(el, registry) {
+    this.el = el;
+    this.$el = $(el);
+    this.params = el.dataset;
+
+    // Optional placeholder for data set by middleware/multi initializer
+    this.data = {};
+
+    // Each instance may define its own components
+    this.registry = registry;
+  }
+
+  /**
+   * Add a new component to the parent registry
+   * @param name
+   * @param opts
+   * @return {ComponentDef}
+   */
+  Component.prototype.define = function (name, opts) {
+    var componentDef = this.registry[name] = new ComponentDef(name, opts);
+
+    // Scan for deferred occurrences of the newly added component
+    var $deferred = this.query(selectors.deferred);
+    if ($deferred.length > 0) {
+      setTimeout(function () {
+        this.load($deferred);
+      }.bind(this), 0);
+    }
+    return componentDef;
+  };
+
+  Component.prototype.query = function (selector) {
+    return this.$el.find(selector);
+  };
+
+  /**
+   * Scan for uninitialized components
+   */
+  Component.prototype.scan = function() {
+    var $unprocessed = this.query(selectors.unprocessed);
+    this.schedule($unprocessed);
+    this.load($unprocessed);
+  };
+
+  Component.prototype.schedule = function ($elements) {
+    $elements.attr("data-sprig-ready-state", 'scheduled');
+  };
+
+  Component.prototype.finalize = function () {
+    this.$el.attr("data-sprig-ready-state", 'loaded');
+    this.scan();
+  };
+
+  /**
+   * Load child components for elements
+   * @param $elements
+   */
+  Component.prototype.load = function ($elements) {
+    $elements.attr("data-sprig-ready-state", 'loading');
+    var _this = this;
+    var groups = $elements.toArray().reduce(function (groups, el) {
+      var componentName = el.dataset.sprigComponent;
+      if (!_this.registry[componentName]) {
+        // ComponentDef is not (yet) registered
+        el.dataset.sprigReadyState = 'deferred';
+        return groups;
+      }
+      groups[componentName] || (groups[componentName] = []);
+      groups[componentName].push(new Component(el, _this.registry));
+      return groups;
+    }, {});
+
+    for (var componentName in groups) if (groups.hasOwnProperty(componentName)) {
+      var components = groups[componentName];
+      var componentDef = this.registry[componentName];
+      if (componentDef.initializeMany) {
+        componentDef.initializeMany(components);
+      }
+      components.forEach(function (component) {
+        if (componentDef.initializeOne) componentDef.initializeOne(component);
+        if (!componentDef.loadAsync) component.scan();
+      });
+    }
+    $elements.attr("data-sprig-ready-state", 'loaded');
+  };
+
+  function ComponentDef(name, opts) {
+    this.opts = opts || {};
+    this.name = name;
+
+    // Initializer for multiple elements
+    this.initializeOne = null;
+
+    // Initializer for single elements
+    this.initializeMany = null;
+
+    this.loadAsync = false;
+  }
+
+  ComponentDef.prototype.many = function (func) {
+    this.initializeMany = func;
+    return this;
+  };
+
+  ComponentDef.prototype.one = function (func) {
+    this.initializeOne = func;
+    return this;
+  };
+
+  ComponentDef.prototype.async = function () {
+    this.loadAsync = true;
+    return this;
+  };
+
+  var Sprig = new Component($('html'), {});
+
+  // Legacy API - remove when client code has been rewritten ------------------
+  Sprig.add = function(name, initializeOne) {
+    var async = initializeOne.length > 2
+    var def = Sprig.define(name).one(function(component) {
+      if (async) {
+        initializeOne(component.$el, component.params, function() {
+          component.finalize();
+        });
+      }
+      else {
+        initializeOne(component.$el, component.params);
+        component.finalize();
+      }
+    });
+    if (async) def.async();
+  };
+  Sprig.load = function($elements) {
+    if (!$elements || $elements == $('body')) Sprig.scan();
+    else Component.prototype.load.apply(this, arguments);
+  };
+  // --------------------------------------------------------------------------
 
   if (typeof exports !== 'undefined') {
-    // Export as CommonJS module...    
+    // Export as CommonJS module...
     module.exports = Sprig;
   }
   else {

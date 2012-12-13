@@ -10,7 +10,7 @@ test:
 		--reporter $(REPORTER)
 
 test-browser:
-	@bin/test-server.js
+	-@node_modules/.bin/coffee test/server test/browser.html
 
 test-cov: lib-cov
 	@echo "  Generating test coverage report"

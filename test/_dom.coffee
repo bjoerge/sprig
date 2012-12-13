@@ -9,3 +9,5 @@ window.location = require('location');
 global.document = document
 global.window = window
 global.navigator = require("navigator")
+
+global._dom = true
