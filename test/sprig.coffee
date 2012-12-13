@@ -1,5 +1,5 @@
 if _dom?
-  require("./extra/_dom")
+  require("./_dom")
   $ = require("jquery")
   expect = require("expect.js")
   sinon = require("sinon")
