@@ -3,16 +3,18 @@ if _dom?
   $ = require("jquery")
   expect = require("expect.js")
   sinon = require("sinon")
-  Sprig = require("../")
+  Component = require("../")
 else
-  {$, expect, sinon, Sprig} = window
+  {$, expect, sinon} = window
+  Component = window.Sprig
 
 after = (ms, f)-> setTimeout(f, ms);
 
 describe "Sprig", ->
   $component = null
+  Sprig = null
   beforeEach ->
-    Sprig.registry = {}
+    Sprig = new Component(document.body)
     $component = $("<div data-sprig-component='some.component'></div>")
   afterEach ->
     $component.remove()
@@ -20,14 +22,14 @@ describe "Sprig", ->
   describe "Scanning for and initialization of components", ->
     it "Calls the initializer for an uninitialized element is called", ->
       spy = sinon.spy()
-      Sprig.define('some.component').one(spy)
+      Sprig.define('some.component').initEach(spy)
       $(document.body).append($component)
       Sprig.scan()
       expect(spy.called).to.be(true)
 
     it "Doesn't load the component for an element more than once", ->
       spy = sinon.spy()
-      Sprig.define('some.component').one(spy)
+      Sprig.define('some.component').initEach(spy)
       $(document.body).append($component)
       Sprig.scan()
       Sprig.scan()
@@ -35,7 +37,7 @@ describe "Sprig", ->
 
     it "Doesn't load the component for a nested element more than once", ->
       spy = sinon.spy()
-      Sprig.define('some.component').one(spy)
+      Sprig.define('some.component').initEach(spy)
       $component.append($("<div data-sprig-component='some.component'></div>"))
       $(document.body).append($component)
       Sprig.scan()
@@ -51,7 +53,7 @@ describe "Sprig", ->
       $(document.body).append($component)
       Sprig.scan()
       spy = sinon.spy()
-      Sprig.define('some.component').one(spy)
+      Sprig.define('some.component').initEach(spy)
       expect(spy.calledOnce).to.be.ok
       # Wait a few mseconds because deferred components are not loaded synchronously
       after 10, ->
@@ -61,11 +63,12 @@ describe "Sprig", ->
   describe "Async components", ->
     it "Will not rescan for new child-components before initializer is called for an async component", (done)->
       spy = sinon.spy()
-      Sprig.define('some.other.component').one(spy)
+      Sprig.define('some.other.component').initEach(spy)
 
-      Sprig.define('some.component').async().one (component)->
-        component.$el.html("<span data-sprig-component='some.other.component'></span>")
-        after 30, -> component.finalize();
+      Sprig.define('some.component').async().initEach (component)->
+        after 30, ->
+          component.$el.html("<span data-sprig-component='some.other.component'></span>")
+          component.finalize();
 
       $(document.body).append($component)
       Sprig.scan()
@@ -75,6 +78,10 @@ describe "Sprig", ->
         done()
 
   describe "Legacy API", ->
+    Sprig = null
+    beforeEach ->
+      Sprig = window.Sprig
+
     it "Keeps an old Sprig.add method intact", ->
       spy = sinon.spy()
       Sprig.add 'some.component', spy
@@ -90,10 +97,12 @@ describe "Sprig", ->
       spyNested = sinon.spy()
       Sprig.add 'some.component', ($el, opts, finalize)->
         spyAsyncInit($el, opts, finalize);
-        $el.html("<span data-sprig-component='some.other.component'></span>")
-        after 30, finalize
 
-      Sprig.define('some.other.component').one(spyNested)
+        after 30, ->
+          $el.html("<span data-sprig-component='some.other.component'></span>")
+          finalize()
+
+      Sprig.define('some.other.component').initEach(spyNested)
 
       $(document.body).append($component)
       Sprig.load()
