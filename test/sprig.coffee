@@ -3,10 +3,10 @@ if _dom?
   $ = require("jquery")
   expect = require("expect.js")
   sinon = require("sinon")
-  Component = require("../")
+  Component = require("../").Component
 else
   {$, expect, sinon} = window
-  Component = window.Sprig
+  Component = window.Sprig.Component
 
 after = (ms, f)-> setTimeout(f, ms);
 
@@ -75,41 +75,4 @@ describe "Sprig", ->
       expect(spy.called).to.be(false)
       after 60, ->
         expect(spy.called).to.be(true)
-        done()
-
-  describe "Legacy API", ->
-    Sprig = null
-    beforeEach ->
-      Sprig = window.Sprig
-
-    it "Keeps an old Sprig.add method intact", ->
-      spy = sinon.spy()
-      Sprig.add 'some.component', spy
-      $(document.body).append($component)
-      Sprig.load()
-      expect(spy.firstCall.args.length).to.equal(2)
-      expect(spy.calledOnce).to.be(true)
-      expect(spy.firstCall.args[0][0]).to.equal($component[0])
-      expect(spy.firstCall.args[1]).to.equal($component[0].dataset)
-
-    it "Keeps an old Sprig.add method intact, also for async components", (done)->
-      spyAsyncInit = sinon.spy()
-      spyNested = sinon.spy()
-      Sprig.add 'some.component', ($el, opts, finalize)->
-        spyAsyncInit($el, opts, finalize);
-
-        after 30, ->
-          $el.html("<span data-sprig-component='some.other.component'></span>")
-          finalize()
-
-      Sprig.define('some.other.component').initEach(spyNested)
-
-      $(document.body).append($component)
-      Sprig.load()
-
-      expect(spyAsyncInit.called).to.be(true)
-      expect(spyAsyncInit.firstCall.args.length).to.equal(3)
-      expect(spyNested.calledOnce).to.be(false)
-      after 60, ->
-        expect(spyNested.calledOnce).to.be(true)
         done()
