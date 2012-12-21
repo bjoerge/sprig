@@ -57,15 +57,11 @@
    * @return {ComponentDef}
    */
   Component.prototype.define = function (name, opts) {
-    var path = this.parents().map(function(parent) {
-      return parent.getName();
-    });
-    path.push(name);
     var myName = this.getName();
-    if (myName) path.unshift(myName);
+    var path = myName ? myName+"."+name : name;
 
-    var componentDef = this.registry[path.join(".")] = new ComponentDef(path.join("."), opts);
-
+    var componentDef = this.registry[path] = new ComponentDef(path, opts);
+    console.log(path)
     // Scan for deferred occurrences of the newly added component
     var $deferred = this.query(selectors.deferred);
     if ($deferred.length > 0) {
