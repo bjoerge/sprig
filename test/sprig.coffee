@@ -47,7 +47,7 @@ describe "Sprig", ->
     it "Get ready state deferred if component element is detected before its defined", ->
       $(document.body).append($component)
       Sprig.scan()
-      expect($component[0].dataset.sprigReadyState).to.be("deferred")
+      expect($component.attr("data-sprig-ready-state")).to.be("deferred")
 
     it "Is gets initialized after its defined if its previously deferred", (done)->
       $(document.body).append($component)
@@ -57,7 +57,7 @@ describe "Sprig", ->
       expect(spy.calledOnce).to.be.ok
       # Wait a few mseconds because deferred components are not loaded synchronously
       after 10, ->
-        expect($component[0].dataset.sprigReadyState).to.be("loaded")
+        expect($component.attr("data-sprig-ready-state")).to.be("loaded")
         done()
 
   describe "Async components", ->

@@ -1,11 +1,38 @@
-(function (window, undefined) {
+(function(window, undefined) {
+
+  /**
+   * Parse data-* attributes of element
+   */
+  var parseAttrs = (function() {
+    var dashed2camel = function(dashedStr) {
+      return dashedStr.replace(/-(.){1}/g, function(_, c) {
+        return c.toUpperCase()
+      })
+    };
+    return function(el) {
+      var data = {};
+      for (var i = 0, _len = el.attributes.length; i < _len; i++) {
+        var attr = el.attributes[i];
+        var match = attr.name.match("^data-(.+)");
+        if (match) {
+          var prop = dashed2camel(match[1]);
+          try {
+            data[prop] = JSON.parse(attr.value)
+          }
+          catch (e) {
+            data[prop] = attr.value;
+          }
+        }
+      }
+    }
+  })();
 
   // DOM4 MutationObserver http://dom.spec.whatwg.org/#mutation-observers
   // todo: var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
 
   var $ = window.jQuery
-      || (typeof require == 'function' && require("jquery"))
-      || (function () {
+    || (typeof require == 'function' && require("jquery"))
+    || (function() {
     throw "Sprig requires jQuery";
   })();
 
@@ -24,7 +51,7 @@
     loaded: "[" + componentAttr + "][" + readyStateAttr + "=loaded]"
   };
 
-  selectors.forComponentDef = function (name) {
+  selectors.forComponentDef = function(name) {
     return "[" + componentAttr + "=" + name + "]";
   };
 
@@ -37,7 +64,8 @@
   function Component(el, parent) {
     this.$el = $(el);
     this.el = this.$el[0];
-    this.params = el.dataset;
+
+    this.params = parseAttrs(this.el);
 
     // Optional placeholder for data set by middleware/multi initializer (todo)
     this.data = {};
@@ -56,16 +84,15 @@
    * @param opts
    * @return {ComponentDef}
    */
-  Component.prototype.define = function (name, opts) {
+  Component.prototype.define = function(name, opts) {
     var myName = this.getName();
-    var path = myName ? myName+"."+name : name;
+    var path = myName ? myName + "." + name : name;
 
     var componentDef = this.registry[path] = new ComponentDef(path, opts);
-    console.log(path)
     // Scan for deferred occurrences of the newly added component
     var $deferred = this.query(selectors.deferred);
     if ($deferred.length > 0) {
-      setTimeout(function () {
+      setTimeout(function() {
         this.load($deferred);
       }.bind(this), 0);
     }
@@ -89,7 +116,7 @@
     return parents;
   };
 
-  Component.prototype.query = function (selector) {
+  Component.prototype.query = function(selector) {
     return this.$el.find(selector);
   };
 
@@ -105,11 +132,11 @@
     });
   };
 
-  Component.prototype.schedule = function ($elements) {
+  Component.prototype.schedule = function($elements) {
     $elements.attr("data-sprig-ready-state", 'scheduled');
   };
 
-  Component.prototype.finalize = function () {
+  Component.prototype.finalize = function() {
     this.$el.attr("data-sprig-ready-state", 'loaded');
     this.scan();
   };
@@ -132,14 +159,15 @@
    * Load child components for elements
    * @param $elements
    */
-  Component.prototype.load = function ($elements) {
+  Component.prototype.load = function($elements) {
     $elements.attr("data-sprig-ready-state", 'loading');
     var _this = this;
-    var groups = $elements.toArray().reduce(function (groups, el) {
-      var componentName = el.dataset.sprigComponent;
+    var groups = $elements.toArray().reduce(function(groups, el) {
+      var $el = $(el);
+      var componentName = $el.attr("data-sprig-component");
       if (!_this.findComponentDef(componentName)) {
         // ComponentDef is not (yet) registered
-        el.dataset.sprigReadyState = 'deferred';
+        $el.attr("data-sprig-ready-state", "deferred");
         return groups;
       }
       groups[componentName] || (groups[componentName] = []);
@@ -153,7 +181,7 @@
       if (componentDef.initializeMany) {
         componentDef.initializeMany(components);
       }
-      components.forEach(function (component) {
+      components.forEach(function(component) {
         if (componentDef.initializeOne) componentDef.initializeOne(component);
         if (!componentDef.loadAsync) component.finalize();
       });
@@ -173,17 +201,17 @@
     this.loadAsync = false;
   }
 
-  ComponentDef.prototype.initMany = function (func) {
+  ComponentDef.prototype.initMany = function(func) {
     this.initializeMany = func;
     return this;
   };
 
-  ComponentDef.prototype.initEach = function (func) {
+  ComponentDef.prototype.initEach = function(func) {
     this.initializeOne = func;
     return this;
   };
 
-  ComponentDef.prototype.async = function () {
+  ComponentDef.prototype.async = function() {
     this.loadAsync = true;
     return this;
   };
