@@ -15,7 +15,7 @@ describe "Sprig", ->
   Sprig = null
   beforeEach ->
     Sprig = new Component(document.body)
-    $component = $("<div data-sprig-component='some.component'></div>")
+    $component = $('<div data-sprig-component="some.component"></div>')
   afterEach ->
     $component.remove()
 
@@ -42,6 +42,39 @@ describe "Sprig", ->
       $(document.body).append($component)
       Sprig.scan()
       expect(spy.calledTwice).to.be(true)
+
+  describe "Nested components", ->
+    it "Allows for nested components", (done)->
+      $child = $("""<div data-sprig-component="some.component.child"></div>""")
+      $component.append($child)
+      $(document.body).append($component)
+
+      fail = after 100, -> expect().fail -> "Child component not initialized"
+
+      Sprig.define("some.component").initEach (component)->
+        expect($child.attr("data-sprig-ready-state")).to.be("deferred")
+        component.define("child").initEach ->
+          clearTimeout fail
+          done()
+
+      Sprig.scan()
+
+    it "allows for nested components at deeper levels", (done)->
+      $child = $("""<div data-sprig-component="some.component.child"></div>""")
+      $grandchild = $("""<div data-sprig-component="some.component.child.child"></div>""")
+      $child.append($grandchild)
+      $component.append($child)
+      $(document.body).append($component)
+
+      fail = after 100, -> expect().fail -> "Child component not initialized"
+      Sprig.define("some.component").initEach (component)->
+        expect($child.attr("data-sprig-ready-state")).to.be("deferred")
+        component.define("child").initEach (child)->
+          child.define("child").initEach ->
+            clearTimeout fail
+            done()
+
+      Sprig.scan()
 
   describe "Component ready states", ->
     it "Get ready state deferred if component element is detected before its defined", ->
