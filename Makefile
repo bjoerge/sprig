@@ -24,4 +24,6 @@ test-docs:
 clean:
 	rm sprig.min.js
 
+dist: clean all
+
 .PHONY: test-cov test docs test-docs clean
