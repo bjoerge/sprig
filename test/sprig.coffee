@@ -15,9 +15,17 @@ describe "Sprig", ->
   Sprig = null
   beforeEach ->
     Sprig = new Component(document.body)
-    $component = $('<div data-sprig-component="some.component"></div>')
+    $component = $('<div data-sprig-component="some.component" data-attr1="foo" data-attr2="bar"></div>')
   afterEach ->
     $component.remove()
+
+  describe "Attributes", ->
+    it "Maps data-* attributes to the component's params property", (done)->
+      Sprig.define('some.component').initEach (component)->
+        expect(component.params).to.eql(sprigComponent: "some.component", sprigReadyState: "loading", attr1: "foo", attr2: "bar")
+        done()
+      $(document.body).append($component)
+      Sprig.scan()
 
   describe "Scanning for and initialization of components", ->
     it "Calls the initializer for an uninitialized element is called", ->
