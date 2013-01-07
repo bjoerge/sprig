@@ -179,11 +179,11 @@
     for (var componentName in groups) if (groups.hasOwnProperty(componentName)) {
       var components = groups[componentName];
       var componentDef = _this.findComponentDef(componentName);
-      if (componentDef.initializeMany) {
-        componentDef.initializeMany(components);
+      if (componentDef.multiInitializer) {
+        componentDef.multiInitializer(components);
       }
       components.forEach(function(component) {
-        if (componentDef.initializeOne) componentDef.initializeOne(component);
+        if (componentDef.initializer) componentDef.initializer(component);
         if (!componentDef.loadAsync) component.finalize();
       });
     }
@@ -194,22 +194,32 @@
     this.name = name;
 
     // Initializer for multiple elements
-    this.initializeOne = null;
+    this.initializer = null;
 
     // Initializer for single elements
-    this.initializeMany = null;
+    this.multiInitializer = null;
 
     this.loadAsync = false;
   }
 
-  ComponentDef.prototype.initMany = function(func) {
-    this.initializeMany = func;
+  ComponentDef.prototype.init = function(func) {
+    this.initializer = func;
     return this;
   };
 
-  ComponentDef.prototype.initEach = function(func) {
-    this.initializeOne = func;
+  ComponentDef.prototype.initMulti = function(func) {
+    this.multiInitializer = func;
     return this;
+  };
+
+  ComponentDef.prototype.initMany = function(func) {
+    console.warn("Use Sprig.define(\""+this.name+"\").initMulti([function]) instead of Sprig.define(\""+this.name+"\").initMany([function])")
+    return ComponentDef.prototype.initMulti.apply(this, arguments)
+  };
+
+  ComponentDef.prototype.initEach = function() {
+    console.warn("Use Sprig.define(\""+this.name+"\").init([function]) instead of Sprig.define(\""+this.name+"\").initEach([function])")
+    ComponentDef.prototype.init.apply(this, arguments)
   };
 
   ComponentDef.prototype.async = function() {

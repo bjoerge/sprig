@@ -21,7 +21,7 @@ describe "Sprig", ->
 
   describe "Attributes", ->
     it "Maps data-* attributes to the component's params property", (done)->
-      Sprig.define('some.component').initEach (component)->
+      Sprig.define('some.component').init (component)->
         expect(component.params).to.eql(sprigComponent: "some.component", sprigReadyState: "loading", attr1: "foo", attr2: "bar")
         done()
       $(document.body).append($component)
@@ -30,14 +30,14 @@ describe "Sprig", ->
   describe "Scanning for and initialization of components", ->
     it "Calls the initializer for an uninitialized element is called", ->
       spy = sinon.spy()
-      Sprig.define('some.component').initEach(spy)
+      Sprig.define('some.component').init(spy)
       $(document.body).append($component)
       Sprig.scan()
       expect(spy.called).to.be(true)
 
     it "Doesn't load the component for an element more than once", ->
       spy = sinon.spy()
-      Sprig.define('some.component').initEach(spy)
+      Sprig.define('some.component').init(spy)
       $(document.body).append($component)
       Sprig.scan()
       Sprig.scan()
@@ -45,7 +45,7 @@ describe "Sprig", ->
 
     it "Doesn't load the component for a nested element more than once", ->
       spy = sinon.spy()
-      Sprig.define('some.component').initEach(spy)
+      Sprig.define('some.component').init(spy)
       $component.append($("<div data-sprig-component='some.component'></div>"))
       $(document.body).append($component)
       Sprig.scan()
@@ -59,9 +59,9 @@ describe "Sprig", ->
 
       fail = after 100, -> expect().fail -> "Child component not initialized"
 
-      Sprig.define("some.component").initEach (component)->
+      Sprig.define("some.component").init (component)->
         expect($child.attr("data-sprig-ready-state")).to.be("deferred")
-        component.define("child").initEach ->
+        component.define("child").init ->
           clearTimeout fail
           done()
 
@@ -75,10 +75,10 @@ describe "Sprig", ->
       $(document.body).append($component)
 
       fail = after 100, -> expect().fail -> "Child component not initialized"
-      Sprig.define("some.component").initEach (component)->
+      Sprig.define("some.component").init (component)->
         expect($child.attr("data-sprig-ready-state")).to.be("deferred")
-        component.define("child").initEach (child)->
-          child.define("child").initEach ->
+        component.define("child").init (child)->
+          child.define("child").init ->
             clearTimeout fail
             done()
 
@@ -94,7 +94,7 @@ describe "Sprig", ->
       $(document.body).append($component)
       Sprig.scan()
       spy = sinon.spy()
-      Sprig.define('some.component').initEach(spy)
+      Sprig.define('some.component').init(spy)
       expect(spy.calledOnce).to.be.ok
       # Wait a few mseconds because deferred components are not loaded synchronously
       after 10, ->
@@ -104,9 +104,9 @@ describe "Sprig", ->
   describe "Async components", ->
     it "Will not rescan for new child-components before initializer is called for an async component", (done)->
       spy = sinon.spy()
-      Sprig.define('some.other.component').initEach(spy)
+      Sprig.define('some.other.component').init(spy)
 
-      Sprig.define('some.component').async().initEach (component)->
+      Sprig.define('some.component').async().init (component)->
         after 30, ->
           component.$el.html("<span data-sprig-component='some.other.component'></span>")
           component.finalize();
