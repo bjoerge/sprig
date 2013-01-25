@@ -31,11 +31,9 @@
   // DOM4 MutationObserver http://dom.spec.whatwg.org/#mutation-observers
   // todo: var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
 
-  var $ = window.jQuery
-    || (typeof require == 'function' && require("jquery"))
-    || (function() {
-    throw "Sprig requires jQuery";
-  })();
+  var $ = (typeof require == 'function' && require("jquery"))
+    || window.jQuery
+    || (function() { throw "Sprig requires jQuery"; })();
 
   var prefix = "sprig";
 
