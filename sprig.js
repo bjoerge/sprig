@@ -92,6 +92,9 @@
     var $deferred = this.query(selectors.deferred);
     if ($deferred.length > 0) {
       setTimeout(function() {
+        // The previously deferred elements may not be deferred anymore.
+        // So filter them out
+        $deferred = $deferred.filter(selectors.deferred);
         this.load($deferred);
       }.bind(this), 0);
     }
