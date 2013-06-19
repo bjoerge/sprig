@@ -3,30 +3,38 @@
   /**
    * Parse data-* attributes of element
    */
-  var parseAttrs = (function() {
-    var dashed2camel = function(dashedStr) {
-      return dashedStr.replace(/-(.){1}/g, function(_, c) {
-        return c.toUpperCase()
-      })
-    };
-    return function(el) {
-      var data = {};
-      for (var i = 0, _len = el.attributes.length; i < _len; i++) {
-        var attr = el.attributes[i];
-        var match = attr.name.match("^data-(.+)");
-        if (match) {
-          var prop = dashed2camel(match[1]);
-          try {
-            data[prop] = JSON.parse(attr.value)
-          }
-          catch (e) {
-            data[prop] = attr.value;
-          }
-        }
+  var dashed2camel = function(dashedStr) {
+    return dashedStr.replace(/-(.){1}/g, function(_, c) {
+      return c.toUpperCase()
+    })
+  };
+
+  var tryParseValues = function(obj) {
+    var parsed = {};
+    var key;
+    for (key in obj) if (obj.hasOwnProperty(key)) {
+      try {
+        parsed[key] = JSON.parse(obj[key]);
       }
-      return data;
+      catch (e) {
+        parsed[key] = obj[key]
+      }
     }
-  })();
+    return parsed;
+  };
+
+  var getAttrs = function(el) {
+    var data = {};
+    for (var i = 0, _len = el.attributes.length; i < _len; i++) {
+      var attr = el.attributes[i];
+      var match = attr.name.match(/^data-(.+)/);
+      if (match) {
+        var prop = dashed2camel(match[1]);
+        data[prop] = attr.value;
+      }
+    }
+    return data;
+  };
 
   // DOM4 MutationObserver http://dom.spec.whatwg.org/#mutation-observers
   // todo: var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
@@ -64,7 +72,8 @@
     this.$el = $(el);
     this.el = this.$el[0];
 
-    this.params = parseAttrs(this.el);
+    this.rawParams = getAttrs(this.el);
+    this.params = tryParseValues(this.rawParams);
 
     // Optional placeholder for data set by middleware/multi initializer (todo)
     this.data = {};
