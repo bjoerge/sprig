@@ -72,8 +72,7 @@
     this.$el = $(el);
     this.el = this.$el[0];
 
-    this.rawParams = getAttrs(this.el);
-    this.params = tryParseValues(this.rawParams);
+    this.params = getAttrs(this.el);
 
     // Optional placeholder for data set by middleware/multi initializer (todo)
     this.data = {};
