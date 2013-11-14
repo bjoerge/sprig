@@ -1,5 +1,18 @@
 (function(window, undefined) {
 
+  // Debounces calling of function `f` until current stack frame has cleared.
+  // Any subsequent calls of a debounced function will be ignored.
+  function debounce(f) {
+    var timer;
+    return debounced;
+    function debounced(){
+      if (timer) return;
+      timer = setTimeout(function(args) {
+        f.apply(this, args); timer = null
+      }.bind(this, arguments), 0);
+    }
+  }
+
   /**
    * Parse data-* attributes of element
    */
@@ -7,20 +20,6 @@
     return dashedStr.replace(/-(.){1}/g, function(_, c) {
       return c.toUpperCase()
     })
-  };
-
-  var tryParseValues = function(obj) {
-    var parsed = {};
-    var key;
-    for (key in obj) if (obj.hasOwnProperty(key)) {
-      try {
-        parsed[key] = JSON.parse(obj[key]);
-      }
-      catch (e) {
-        parsed[key] = obj[key]
-      }
-    }
-    return parsed;
   };
 
   var getAttrs = function(el) {
@@ -35,23 +34,14 @@
     }
     return data;
   };
-
-  // DOM4 MutationObserver http://dom.spec.whatwg.org/#mutation-observers
-  // todo: var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
-
-  var $ = (typeof require == 'function' && require("jquery"))
-    || window.jQuery
-    || (function() { throw "Sprig requires jQuery"; })();
-
   var prefix = "sprig";
 
   var componentAttr = 'data-' + prefix + '-component';
   var readyStateAttr = 'data-' + prefix + '-ready-state';
 
-  //--- Selectors used frequently (todo wrap in a nice chainable api)
+  //--- Selectors used frequently
   var selectors = {
     component: "[" + componentAttr + "]",
-    unprocessed: "[" + componentAttr + "]:not([" + readyStateAttr + "])",
     scheduled: "[" + componentAttr + "][" + readyStateAttr + "=scheduled]",
     deferred: "[" + componentAttr + "][" + readyStateAttr + "=deferred]",
     loading: "[" + componentAttr + "][" + readyStateAttr + "=loading]",
@@ -69,11 +59,16 @@
    * @param parent
    */
   function Component(el, parent) {
-    this.$el = $(el);
-    this.el = this.$el[0];
+    if (Sprig && Sprig.hasOwnProperty('$')) {
+      this.$el = Sprig.$(el);
+    }
+    this.el = el;
 
     this.params = getAttrs(this.el);
 
+    this.scan = debounce(this.scan);
+    this.load = debounce(this.load);
+    
     // Optional placeholder for data set by middleware/multi initializer (todo)
     this.data = {};
 
@@ -95,60 +90,47 @@
     var myName = this.getName();
     var path = myName ? myName + "." + name : name;
 
-    var componentDef = this.registry[path] = new ComponentDef(path, opts);
+    this._loadDeferreds();
+
+    return this.registry[path] = new ComponentDef(path, opts);
+  };
+
+  Component.prototype._loadDeferreds = function() {
     // Scan for deferred occurrences of the newly added component
-    var $deferred = this.query(selectors.deferred);
-    if ($deferred.length > 0) {
-      setTimeout(function() {
-        // The previously deferred elements may not be deferred anymore.
-        // So filter them out
-        $deferred = $deferred.filter(selectors.deferred);
-        this.load($deferred);
-      }.bind(this), 0);
+    var deferredElements = this.query(selectors.deferred);
+    if (deferredElements.length > 0) {
+      this.load(deferredElements);
     }
-    return componentDef;
-  };
-
+  }
+  
   Component.prototype.getName = function() {
-    return this.$el.attr("data-sprig-component");
-  };
-
-  /**
-   * @return {Array}
-   */
-  Component.prototype.parents = function() {
-    var parents = [];
-    var it = this.parent;
-    while (it && it.parent) {
-      parents.push(it);
-      it = it.parent;
-    }
-    return parents;
+    return this.el.getAttribute("data-sprig-component");
   };
 
   Component.prototype.query = function(selector) {
-    return this.$el.find(selector);
+    return this.el.querySelectorAll(selector);
   };
 
   /**
    * Scan for uninitialized components
    */
   Component.prototype.scan = function() {
-    var $unprocessed = this.query(selectors.unprocessed);
-    this.schedule($unprocessed);
-    this.load($unprocessed);
-    this.children.forEach(function(child) {
-      child.scan();
-    });
+    var allComponents = this.query(selectors.component);
+    var unprocessedElements = [];
+    for (var i = 0; i < allComponents.length; ++i) {
+      var el = allComponents[i];
+      if (!el.hasAttribute('data-sprig-ready-state')) {
+        unprocessedElements.push(el)
+      }
+    }
+    this.schedule(unprocessedElements);
+    this.load(unprocessedElements);
   };
 
-  Component.prototype.schedule = function($elements) {
-    $elements.attr("data-sprig-ready-state", 'scheduled');
-  };
-
-  Component.prototype.finalize = function() {
-    this.$el.attr("data-sprig-ready-state", 'loaded');
-    this.scan();
+  Component.prototype.schedule = function(elements) {
+    for (var i = 0; i < elements.length; ++i) {
+      elements[i].setAttribute("data-sprig-ready-state", 'scheduled')
+    }
   };
 
   /**
@@ -167,25 +149,27 @@
 
   /**
    * Load child components for elements
-   * @param $elements
+   * @param elements
    */
-  Component.prototype.load = function($elements) {
-    $elements.attr("data-sprig-ready-state", 'loading');
+  Component.prototype.load = function(elements) {
     var _this = this;
-    var groups = $elements.toArray().reduce(function(groups, el) {
-      var $el = $(el);
-      var componentName = $el.attr("data-sprig-component");
+    var groups = {};
+    var el, i, componentName;
+    for (i = 0; i < elements.length; ++i) {
+      el = elements[i];
+      el.setAttribute("data-sprig-ready-state", 'loading')      
+      componentName = el.getAttribute("data-sprig-component");
       if (!_this.findComponentDef(componentName)) {
         // ComponentDef is not (yet) registered
-        $el.attr("data-sprig-ready-state", "deferred");
-        return groups;
+        el.setAttribute("data-sprig-ready-state", "deferred");
       }
-      groups[componentName] || (groups[componentName] = []);
-      groups[componentName].push(new Component(el, _this));
-      return groups;
-    }, {});
+      else {
+        groups[componentName] || (groups[componentName] = []);
+        groups[componentName].push(new Component(el, _this));  
+      }
+    }
 
-    for (var componentName in groups) if (groups.hasOwnProperty(componentName)) {
+    for (componentName in groups) if (groups.hasOwnProperty(componentName)) {
       var components = groups[componentName];
       var componentDef = _this.findComponentDef(componentName);
       if (componentDef.multiInitializer) {
@@ -193,7 +177,8 @@
       }
       components.forEach(function(component) {
         if (componentDef.initializer) componentDef.initializer(component);
-        if (!componentDef.loadAsync) component.finalize();
+        component.el.setAttribute("data-sprig-ready-state", 'loaded')
+        component.scan()
       });
     }
   };
@@ -208,7 +193,6 @@
     // Initializer for single elements
     this.multiInitializer = null;
 
-    this.loadAsync = false;
   }
 
   ComponentDef.prototype.init = function(func) {
@@ -221,22 +205,7 @@
     return this;
   };
 
-  ComponentDef.prototype.initMany = function(func) {
-    console.warn("Use Sprig.define(\""+this.name+"\").initMulti([function]) instead of Sprig.define(\""+this.name+"\").initMany([function])")
-    return ComponentDef.prototype.initMulti.apply(this, arguments)
-  };
-
-  ComponentDef.prototype.initEach = function() {
-    console.warn("Use Sprig.define(\""+this.name+"\").init([function]) instead of Sprig.define(\""+this.name+"\").initEach([function])")
-    ComponentDef.prototype.init.apply(this, arguments)
-  };
-
-  ComponentDef.prototype.async = function() {
-    this.loadAsync = true;
-    return this;
-  };
-
-  var Sprig = new Component($('html'));
+  var Sprig = new Component(document.querySelector('html'));
 
   Sprig.Component = Component;
 

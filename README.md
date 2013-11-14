@@ -7,19 +7,25 @@
 Download [uncompressed](http://raw.github.com/bjoerge/sprig/master/sprig.js) (~ 6,5KB) 
 or [minified](http://raw.github.com/bjoerge/sprig/master/sprig.min.js) (~ 4KB)
 
-Currently Sprig depends on [jQuery](http://jquery.com).
+Sprig has no dependencies but *can* be used with jquery by setting Sprig.$ to an instance of jquery like this:
+
+```
+Sprig.$ = window.jQuery
+```
+
+Now component instances will have an `$el` reference which is `component.el` as wrapped by `$()`.
 
 # Usage examples
 
 ## Hello world
 
-Register the hello-world component by calling the `Sprig.add()` function. It takes two parameters, `componentId` and `setupFunction`
-
-The `setupFunction` is called whenever an element with the attribute `data-sprig-component='hello-word'` is inserted to the DOM.
+Register the hello-world component by calling the `Sprig.define()` method. It takes one parameter a `componentId` and
+returns a component definition. The component definition can then be configured with an init function, which will be called
+every time a matching component is detected in the DOM.
 
 ```js
-Sprig.add('hello-world', function(el, opts) {
-  el.innerHTML = "Hello World!";
+Sprig.define('hello-world').init(function(component) {
+  component.el.innerHTML = "Hello World!";
 });
 ```
 
@@ -27,7 +33,7 @@ Inserting a `hello-world` component to the body:
 
 ```js
 document.body.innerHTML = '<div data-sprig-component="hello-world"></div>';
-Sprig.load(document.body); // <-- can be skipped in newer versions of Chrome and Firefox
+Sprig.scan(document.body); // Will look for and initialize any uninitialized components found in the document body.
 ```
 
 Will result in:
@@ -41,12 +47,12 @@ Hello World
 Components inserting other components just works:
 
 ```js
-Sprig.add('parent', function(el, opts) {
-  el.innerHTML = 'I am the parent. This is my child: <div data-sprig-component="child"></div>';
+Sprig.define('parent').init(function(component) {
+  component.el.innerHTML = 'I am the parent. This is my child: <div data-sprig-component="child"></div>';
 });
 
-Sprig.add('child', function(el, opts) {
-  el.innerHTML = 'I am the child.';
+Sprig.define('child').init(function(component) {
+  component.el.innerHTML = 'I am the child.';
 });
 ```
 
@@ -66,27 +72,29 @@ I am the child.
 
 ## Passing data
 
-For convenience, all the HTML5 data-* attributes defined on the element are passed as second parameter to the
-`setupFunction`
+For convenience, all the HTML5 data-* attributes defined on the element are attached to the component's `param`
+property.
 
-For newer browsers this is a reference to the elements' `dataset` property
+Note: For browsers that supports HTML5 data-* attributes, this is a reference to the elements' `dataset` property
 
 ```js
-Sprig.add('hello-planet', function(el, opts) {
-  el.innerHTML = 'Hello '+(opts.planet || 'mysterious planet');
+Sprig.define('hello-planet').init(function(component) {
+  el.innerHTML = 'Hello '+(component.params.planet || 'mysterious planet');
 });
 ```
 
 Inserting this `hello-planet` component to the body:
 
 ```js
+// planet component with no params
 document.body.innerHTML = '<div data-sprig-component="hello-planet"></div>';
 
+// planet component with planet set to moon
 var moon = document.createElement("div");
 moon.setAttribute("data-sprig-component", "hello-planet");
 moon.setAttribute("data-planet", "moon");
 document.body.appendChild(moon);
-Sprig.load(document.body);
+Sprig.scan(document.body);
 ```
 
 ... will result in:
@@ -98,30 +106,18 @@ Hello moon
 
 ## Asynchronous components
 
-Quite often you'll need to request data from the server, wait for the server to return it before displaying it. 
-
-If the `setupFunction` takes three parameters, it is assumed to be async, and will pass a `done` function that is to 
-be called when the asynchronous action is complete.
-
-```js
-Sprig.add('async-component', function(el, opts, done) {
-  $.get("/some/data.json").then(function(data) {
-    el.innerHTML = "The server gave me this value: <b>"+data.value+"</b>";
-    done();
-  });
-  el.innerHTML = "Requesting data from server...";
-});
-```
-
-# How does it work?
-
-In bleeding edge browsers supporting [Mutation Observers](http://dom.spec.whatwg.org/#mutation-observers)
-(currently only Chrome and Firefox), Sprig works by observing changes to the DOM tree. This, however, only works
-for nodes inserted dynamically from JavaScript. If you serve a HTML file already layed out with components, then you will 
-have to set them up initially, e.g. on domReady, like this:
+A common scenario is the need to request data from the server and wait for the server to return it before displaying it.
+If you are inserting child-components into the component element asynchronously, you will have to call `component.scan()`
+in order to have Sprig looking for newly arrived and uninitalized components.
 
 ```js
-$(function() {
-  Sprig.load(document.body);
+Sprig.define('some-async-component').init(function(component) {
+  setTimeout(function(planet) {
+    // now we got our planet
+    var planet = {name: 'Pluto'}
+    component.el.innerHTML = '<div data-sprig-component="hello-planet" data-planet="'+planet.name+'"></div>';
+    component.scan();
+  }, 1000);
+  component.el.innerHTML = "Simulating requesting data from server...";
 });
 ```

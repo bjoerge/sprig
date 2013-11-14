@@ -11,51 +11,59 @@ else
 after = (ms, f)-> setTimeout(f, ms);
 
 describe "Sprig", ->
-  $component = null
+  $el = null
   Sprig = null
   beforeEach ->
     Sprig = new Component(document.body)
-    $component = $('<div data-sprig-component="some.component" data-attr1="foo" data-attr2="bar"></div>')
+    $el = $('<div data-sprig-component="some.component" data-attr1="foo" data-attr2="bar"></div>')
   afterEach ->
-    $component.remove()
+    $el.remove()
 
   describe "Attributes", ->
     it "Maps data-* attributes to the component's params property", (done)->
       Sprig.define('some.component').init (component)->
         expect(component.params).to.eql(sprigComponent: "some.component", sprigReadyState: "loading", attr1: "foo", attr2: "bar")
         done()
-      $(document.body).append($component)
+      $(document.body).append($el)
       Sprig.scan()
 
   describe "Scanning for and initialization of components", ->
-    it "Calls the initializer for an uninitialized element is called", ->
-      spy = sinon.spy()
-      Sprig.define('some.component').init(spy)
-      $(document.body).append($component)
-      Sprig.scan()
-      expect(spy.called).to.be(true)
+    it "Calls the initializer for an uninitialized element is called", (done)->
+      fail = after 100, -> expect().fail -> "Component never initialized"
 
-    it "Doesn't load the component for an element more than once", ->
-      spy = sinon.spy()
-      Sprig.define('some.component').init(spy)
-      $(document.body).append($component)
-      Sprig.scan()
-      Sprig.scan()
-      expect(spy.calledOnce).to.be(true)
+      Sprig.define('some.component').init ->
+        clearTimeout(fail)
+        done()
 
-    it "Doesn't load the component for a nested element more than once", ->
+      $(document.body).append($el)
+      Sprig.scan()
+
+    it "Doesn't load the component for an element more than once", (done)->
+      spy = sinon.spy()
+      Sprig.define('some.component').init spy
+      $(document.body).append($el)
+      Sprig.scan()
+      after 10, ->
+        Sprig.scan()
+        after 10, ->
+          expect(spy.calledOnce).to.be(true)
+          done()
+
+    it "Doesn't load the component for a nested element more than once", (done)->
       spy = sinon.spy()
       Sprig.define('some.component').init(spy)
-      $component.append($("<div data-sprig-component='some.component'></div>"))
-      $(document.body).append($component)
+      $el.append($("<div data-sprig-component='some.component'></div>"))
+      $(document.body).append($el)
       Sprig.scan()
-      expect(spy.calledTwice).to.be(true)
+      after 100, ->
+        expect(spy.calledTwice).to.be(true)
+        done()
 
   describe "Nested components", ->
     it "Allows for nested components", (done)->
       $child = $("""<div data-sprig-component="some.component.child"></div>""")
-      $component.append($child)
-      $(document.body).append($component)
+      $el.append($child)
+      $(document.body).append($el)
 
       fail = after 100, -> expect().fail -> "Child component not initialized"
 
@@ -71,8 +79,8 @@ describe "Sprig", ->
       $child = $("""<div data-sprig-component="some.component.child"></div>""")
       $grandchild = $("""<div data-sprig-component="some.component.child.child"></div>""")
       $child.append($grandchild)
-      $component.append($child)
-      $(document.body).append($component)
+      $el.append($child)
+      $(document.body).append($el)
 
       fail = after 100, -> expect().fail -> "Child component not initialized"
       Sprig.define("some.component").init (component)->
@@ -85,20 +93,22 @@ describe "Sprig", ->
       Sprig.scan()
 
   describe "Component ready states", ->
-    it "Get ready state deferred if component element is detected before its defined", ->
-      $(document.body).append($component)
+    it "Get ready state deferred if component element is detected before its defined", (done)->
+      $(document.body).append($el)
       Sprig.scan()
-      expect($component.attr("data-sprig-ready-state")).to.be("deferred")
+      after 30, ->
+        expect($el.attr("data-sprig-ready-state")).to.be("deferred")
+        done()
 
     it "Is gets initialized after its defined if its previously deferred", (done)->
-      $(document.body).append($component)
+      $(document.body).append($el)
       Sprig.scan()
       spy = sinon.spy()
       Sprig.define('some.component').init(spy)
       expect(spy.calledOnce).to.be.ok
       # Wait a few mseconds because deferred components are not loaded synchronously
-      after 10, ->
-        expect($component.attr("data-sprig-ready-state")).to.be("loaded")
+      after 30, ->
+        expect($el.attr("data-sprig-ready-state")).to.be("loaded")
         done()
 
   describe "Async components", ->
@@ -106,14 +116,14 @@ describe "Sprig", ->
       spy = sinon.spy()
       Sprig.define('some.other.component').init(spy)
 
-      Sprig.define('some.component').async().init (component)->
+      Sprig.define('some.component').init (component)->
         after 30, ->
-          component.$el.html("<span data-sprig-component='some.other.component'></span>")
-          component.finalize();
+          expect(spy.called).to.be(false)
+          component.el.innerHTML = "<span data-sprig-component='some.other.component'></span>"
+          component.scan()
+          after 30, ->
+            expect(spy.called).to.be(true)
+            done()
 
-      $(document.body).append($component)
+      $(document.body).append($el)
       Sprig.scan()
-      expect(spy.called).to.be(false)
-      after 60, ->
-        expect(spy.called).to.be(true)
-        done()
