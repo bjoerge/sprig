@@ -2,12 +2,12 @@
   "author": "Bjoerge Naess <bjoerge@gmail.com>",
   "name": "sprig",
   "description": "Tiny, efficient DOM components",
-  "version": "0.0.10",
+  "version": "0.1.0-beta-5",
   "repository": {
     "type": "git",
     "url": "github.com/bjoerge/sprig.git"
   },
-  "main": "lib/sprig.js",
+  "main": "sprig.js",
   "dependencies": {},
   "devDependencies": {
     "jquery": "git://github.com/bjoerge/jquery-node#master",
@@ -15,6 +15,7 @@
     "location": "latest",
     "jsdom": "latest",
     "navigator": "latest",
+    "es5-shim": "latest",
     "mocha": "latest",
     "uglify-js": "latest",
     "expect.js": "latest",
